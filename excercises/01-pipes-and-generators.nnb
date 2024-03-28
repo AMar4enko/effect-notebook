@@ -1,0 +1,102 @@
+{
+    "cells": [
+        {
+            "language": "markdown",
+            "source": [
+                "# Pipe APIs\nApplying transformations the way we saw in the previous example is neither ergonomic nor eye-pleasing.  \nWe can do much better with pipe APIs.\n\nEffect values have built-in `pipe` operator, which helps you encode your transformation as a chain of operations without need for intermediary values."
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\n\nconst result = Effect.succeed(1).pipe(\n  Effect.andThen(a => a + 2)\n)\n\nconsole.log(`Result: ${Effect.runSync(result)}`)\n"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 3",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "# Generators-based API\nIt's not rare pipe falls short when you're looking to code more imperative flow. Generators-based API is here to help.  \nIf may look a little busy, but it's totally worth it. Inside Effect generator function you can run effects to get back their values"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "import { Effect } from 'effect'\n\nconst a = Effect.succeed(1)\n\nconst result = Effect.gen(function* ($) {\n  /**\n   * yield* $(...) runs your effect and extracts it's value\n   * You can have as many yield expressions as you want\n   */\n  \n  const value = yield* $(a) \n  return value + 2;\n})\n\nconsole.log(`Result: ${Effect.runSync(result)}`)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 3",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "You can see $ being first argument of our generator function - I call it a magic wand symbol, I'm nostalgic for jQuery.  \nIn fact you can name it as you want. Some folks use `_`  \nThis magic wand symbol has another unique quality - it also acts as a pipe operator."
+            ],
+            "outputs": []
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "import { Effect } from 'effect'\n\nconst a = Effect.succeed(1)\n\nconst result = Effect.gen(function* ($) {\n  const value = yield* $(\n    a, // Here we have our Effect a,\n    Effect.andThen((a) => a * 10) // Before passing it to yeild* we can also use pipe-style transformations\n  ) \n  return value + 2;\n})\n\nconsole.log(`Result: ${Effect.runSync(result)}`)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 12",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "import { Effect } from 'effect'\n/**\n * To a great extent it can be seen as a replacement for async/await\n */\nconst aPromise = Promise.resolve(1)\n\nconst resultPromise = async () => {\n  const value = await aPromise\n  return value + 2\n}\n\nresultPromise().then((a) => console.log(`Promise result: ${a}`))\n\n\nconst aEffect = Effect.succeed(1)\n\nconst resultEffect = Effect.gen(function* ($) {\n  const value = yield* $(aEffect) // Here yield* $(...) is similar to await ...\n  return value + 2\n})\n\nconsole.log(`Effect result: ${Effect.runSync(resultEffect)}`)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Effect result: 3",
+                                "Promise result: 3",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

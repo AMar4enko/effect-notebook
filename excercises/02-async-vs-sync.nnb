@@ -1,0 +1,38 @@
+{
+    "cells": [
+        {
+            "language": "markdown",
+            "source": [
+                "# Async vs Sync\n\nIn JS world we have two completely separate coding concepts - sync and async computations. \nAsync computations are encoded with help of **promises**.  \nUnfortunately, when it comes to promises, we fall in a trap called `colored function`.  It means, as soon as we get to a promise, all our code, that uses promises, has to be promisified. You either use `.then` Promise API to chain promises, or resort to syntax sugar `async/await` - it's a whole new concept only to encode async computations.  \nIn Effect world, sync and async computations are both represented with Effect."
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\n\nconst a = Effect.succeed(1)\n\nconst addAsync = (a: number) => Effect.promise(() => Promise.resolve(a + 2))\n\n/**\n * Do you see a possible improvement opportunity here btw?\n */\nconst result = a.pipe(\n  Effect.andThen((a) => addAsync(a)),\n)\n\nconsole.log(`Mixed sync + async: ${Effect.runSync(result)}`)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "AsyncFiberException",
+                                "message": "Fiber #0 cannot be be resolved synchronously, this is caused by using runSync on an effect that performs async work",
+                                "stack": "AsyncFiberException: Fiber #0 cannot be be resolved synchronously, this is caused by using runSync on an effect that performs async work"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "Oh wait, our code failed! In Effect, the only `colored` part is when Effect gets executed. If your Effect involves async work, you have to run it using `runPromise`. Would you mind go and fix the example above? Use `Effect.runPromise` to convert Effect into Promise, then tap into promise and output it's result."
+            ],
+            "outputs": []
+        }
+    ]
+}

@@ -1,0 +1,32 @@
+{
+    "cells": [
+        {
+            "language": "markdown",
+            "source": [
+                "# Dependency inversion in Effect\n\nWe've got result A and possible errors E covered. But there was a 3rd type argument which was set to `never` so far.  \nWhat's that about?  \nIt represents effectful computation dependencies. Consider computation, that reads user name from the database.  \nLet's try to model it - it will return string, may fail with `UserNotFound` or `DatabaseError`, and it needs database connection to run query against. Let's see how can we achieve it with Effect - bad then good way"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\nclass DatabaseError extends TaggedError(`DatabaseError`) {\n}\n\nclass UserNotFoundError extends TaggedError(`UserNotFoundError`)<{ userId: number }> {\n}\n\n/**\n * This is our faux database connection object.\n * It either returns us user name or empty value (not found) or throws db error.\n */\nconst DatabaseConnection = {\n  getUserName: (userId: number): Effect.Effect<string | undefined, DatabaseError> => \n    userId < 10\n      ? Effect.succeed(`User ${userId}`)\n      : userId < 20 \n        ? Effect.succeed(undefined)\n        : Effect.fail(new DatabaseError())\n}\n\nconst getUserName = (userId: number) => Effect.gen(function * ($) {\n  const userName = yield* $(DatabaseConnection.getUserName(userId))\n\n  if (userName === undefined) {\n    return yield* $(new UserNotFoundError({ userId}))\n  }\n\n  return userName;\n})"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "This implementation if flawed because it's tightly coupled to DatabseConnection service"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\nclass DatabaseError extends TaggedError(`DatabaseError`) {\n}\n\nclass UserNotFoundError extends TaggedError(`UserNotFoundError`)<{ userId: number }> {\n}\n\n/**\n * This is our faux database connection object.\n * It either returns us user name or empty value (not found) or throws db error.\n */\nconst DatabaseConnection = {\n  getUserName: (userId: number): Effect.Effect<string | undefined, DatabaseError> => \n    userId < 10\n      ? Effect.succeed(`User ${userId}`)\n      : userId < 20 \n        ? Effect.succeed(undefined)\n        : Effect.fail(new DatabaseError())\n}\n\nconst getUserName = (userId: number) => Effect.gen(function * ($) {\n  const userName = yield* $(DatabaseConnection.getUserName(userId))\n\n  if (userName === undefined) {\n    yield* $(new UserNotFoundError({ userId}))\n  }\n\n  return userName;\n})"
+            ],
+            "outputs": []
+        }
+    ]
+}

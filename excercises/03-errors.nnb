@@ -1,0 +1,153 @@
+{
+    "cells": [
+        {
+            "language": "markdown",
+            "source": [
+                "# Errors\n\nSo we've covered our first property of Effect - it's return value. It's time to talk about the second one - Effect is capable of exposing possible errors via it's second type argument.  \n`Effect<A, E>` represents computation that either returns value A or fails with error E  \nIf Effect never fails, you'll see E type arg as never"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\n/**\n * Here we define custom error type\n * String `WrongNumberError` represents it's tag, more about it later\n * We also specify the shape of the error object - it carries message string with it\n */\nclass WrongNumberError extends TaggedError('WrongNumberError')<{ message: string }> {\n}\n\n\nconst isDecentNumber = (a: number): Effect.Effect<string, WrongNumberError> => a < 5 \n  ? Effect.succeed(`${a} is fine`)\n  : Effect.fail(new WrongNumberError({ message: `${a} is too big` }))\n\n\nconsole.log(Effect.runSync(isDecentNumber(3))) // prints \"3 is fine\"\nconsole.log(Effect.runSync(isDecentNumber(6))) // this throws WrongNumberError\n"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "3 is fine",
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "WrongNumberError",
+                                "message": "6 is too big",
+                                "stack": "WrongNumberError: 6 is too big\r\n    at isDecentNumber (<Cell 2> [15, 10])\n    at <Cell 2> [19, 7]\n    at <Cell 2> [13, 46]\n    at Script.runInContext (node:vm:133:12)\n    at Script.runInNewContext (node:vm:138:17)\n    at Object.runInNewContext (node:vm:288:38)\n    at C (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)\n    at t.execCode (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)\n    at k.<anonymous> (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)\n    at k.emit (node:events:515:28)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "Here's where it's gets extremely exciting! As a matter of fact, all the mapping and transformations get applied if Effect ran successfully"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\nclass WrongNumberError extends TaggedError('WrongNumberError')<{ message: string }> {\n}\n\nconst isDecentNumber = (a: number): Effect.Effect<string, WrongNumberError> => a < 5 \n  ? Effect.succeed(`${a} is fine`)\n  : Effect.fail(new WrongNumberError({ message: `${a} is too big` }))\n\n/**\n * We wrap our function into another function and manipulate result\n */\nconst result = (a: number) => isDecentNumber(a).pipe(\n  Effect.andThen((a) => Effect.succeed(`Result: ${a}`))\n)\n\nconsole.log(Effect.runSync(result(3))) // prints \"Result: 3 is fine\"\nconsole.log(Effect.runSync(result(6))) // this throws WrongNumberError"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 3 is fine",
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "WrongNumberError",
+                                "message": "6 is too big",
+                                "stack": "WrongNumberError: 6 is too big\r\n    at isDecentNumber (<Cell 4> [9, 10])\n    at result (<Cell 4> [14, 0])\n    at <Cell 4> [19, 7]\n    at <Cell 4> [14, 46]\n    at Script.runInContext (node:vm:133:12)\n    at Script.runInNewContext (node:vm:138:17)\n    at Object.runInNewContext (node:vm:288:38)\n    at C (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)\n    at t.execCode (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)\n    at k.<anonymous> (/Users/amarchenko/.vscode/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "No more cascading `try/catch` statements - just write your code as if it never fails, and deal with errors later.  \nBut how do I deal with errors? As you may already guessed, Effect provides you with solid tooling to apply transformations not only to return channel A, but also to error channel E"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\nclass WrongNumberError extends TaggedError('WrongNumberError')<{ message: string }> {\n}\n\nconst isDecentNumber = (a: number): Effect.Effect<string, WrongNumberError> => a < 5 \n  ? Effect.succeed(`${a} is fine`)\n  : Effect.fail(new WrongNumberError({ message: `${a} is too big` }))\n\n/**\n * Pay attention to Effect.catchAll predicate function parameter error - hover to reveal popup\n * It infers error to be of type WrongNumberError, because it's encoded in 2nd parameter of our Effect value type\n * We explicitely encoded this logic in our isDecentNumber function and can leverage it throughout the code\n */\nconst result = (a: number) => isDecentNumber(a).pipe(\n  Effect.andThen((a) => Effect.succeed(`Result: ${a}`)),\n  Effect.catchAll((error) => Effect.succeed(`Error: ${error.message}`)) // catchAll is counterpart of flatMap but for errors\n)\n\nconsole.log(Effect.runSync(result(3))) // prints \"Result: 3 is fine\"\nconsole.log(Effect.runSync(result(6))) // prints \"Error: 6 is too big\""
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 3 is fine",
+                                "Error: 6 is too big",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "Well, let me tell you there is much more - you can encode as many errors as you want with one Effect (consider effect performing user lookup from the database - you may end up with UserNotFound or DatabaseError), they'll encoded as type union `UserNotFound | DatabaseError`"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nimport { TaggedError } from 'effect/Data'\n\nclass WrongNumberError extends TaggedError('WrongNumberError')<{ message: string }> {\n}\n\nclass NanError extends TaggedError('NanError') {\n}\n\nconst isDecentNumber = (a: number): Effect.Effect<string, WrongNumberError> => a < 5 \n  ? Effect.succeed(`${a} is fine`)\n  : Effect.fail(new WrongNumberError({ message: `${a} is too big` }))\n\n/**\n * Here we're using generator style effect to easily encode branching logic\n * Hover result variable to reveal it's type - it's inferred to be Effect.Effect<string, WrongNumberError | NanError, never>\n * We effectively encoded two different branches into one single Effect value that carries \n * information about possible errors that can occur\n */\nconst combined = (a: number) => Effect.gen(function* ($) {\n  if (isNaN(a)) {\n    yield* $(Effect.fail(new NanError()))\n  }\n  \n  return yield* $(isDecentNumber(a))\n})\n\n/**\n * Here encode logic, that only catches WrongNumberError error, passing NanError through\n */\nconst result = (a: number) => combined(a).pipe(\n  Effect.andThen((a) => Effect.succeed(`Result: ${a}`)),\n  // catchTag is a counterpart of catchAll but it only catches errors with specified tag (remember, TaggedError?)\n  Effect.catchTag(`WrongNumberError`, (error) => Effect.succeed(`Error: ${error.message}`)),\n)\n\nconsole.log(Effect.runSync(result(3))) // prints \"Result: 3 is fine\"\nconsole.log(Effect.runSync(result(6))) // prints \"Error: 6 is too big\"\nconsole.log(Effect.runSync(result(NaN))) // fails"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Result: 3 is fine",
+                                "Error: 6 is too big",
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "NanError",
+                                "message": "unknown",
+                                "stack": "NanError\r\n    at next (<Cell 8> [22, 9])\n    at Generator.next (<anonymous>)\n    at /Users/amarchenko/effect-demo/node_modules/effect/src/internal/core-effect.ts:802:28"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "Can you fix the example above to correctly process not a number scenario too?"
+            ],
+            "outputs": []
+        }
+    ]
+}

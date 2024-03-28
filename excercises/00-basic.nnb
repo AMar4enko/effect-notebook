@@ -1,0 +1,75 @@
+{
+    "cells": [
+        {
+            "language": "markdown",
+            "source": [
+                " # Basics - lifting, running, transforming\n \n `Effect.succeed(a)`\n creates new sync `Effect<A>` for you where type A represents type of **a** passed into it  \n It belongs to **constructors** category - it lifts our regular JS value into Effect"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nconst a: Effect.Effect<number> = Effect.succeed(1)\nconst b: Effect.Effect<string> = Effect.succeed(`value`)\n/**\n * It's unlikely you'll be adding type annotations yourself like in the example above too often,\n * since Effect+TypeScript type system almost never needs help inferring types, unless you start\n * creating complex abstractions on top of Effect.\n */"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "Okay I have my value wrapped in Effect, how do I get it back?  \nEffect represents an execution plan of your program, which is later run by Effect runtime.  The most simple way to run your effect and get back result is to use `Effect.runSync`"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\nconst a: Effect.Effect<number> = Effect.succeed(1)\n\nconsole.log(`Value from effect: ${Effect.runSync(a)}`)\n/** It imprints transformation: A -> Effect<A> -> A */"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Value from effect: 1",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "markdown",
+            "source": [
+                "The next thing to learn about is transformations. Effect has very comprehensive list of APIs that let you combine multiple effects and transform Effect values. Meet `map`, `flatMap` and `andThen`"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "import { Effect } from 'effect'\n\nconst a = Effect.succeed(1)\n\n/**\n * Effect.map let's your transform value A under Effect<A> into value B.\n * It's like with Array - you have arrar of values A, you map it with a function and get back array of values B.\n */\nconst mapped = Effect.map(a, (value) => value + 1)\n\nconsole.log(`Mapped value: ${Effect.runSync(mapped)}`)\n\n/**\n * Effect.flatMap is pretty much resembles map, but it's used when you want to chain effects.\n * Looking back to our Array example, if you map each element of array with a function that returns another array,\n * you'll end up with array of arrays. If you then flatten array, you get rid of nesting and end up with array of values.\n * \n * Unlike with map, where your map function transforms A -> B, with flatMap it will transforms A -> Effect<B>.\n */\n\nconst flatMapped = Effect.flatMap(a, (value) => Effect.succeed(value + 2))\n\nconsole.log(`FlatMapped value: ${Effect.runSync(flatMapped)}`)\n\n/**\n * And finally, andThen is map + flatMap on steroids, it has properties of both and even more.  \n * You can pass in \n * * transformation function as in map\n * * transformation function that returns another effect as in flatMap\n * * plain value\n * * effect\n */\n\nconst andThenned1 = Effect.andThen(a, (value) => value + 3)\nconst andThenned2 = Effect.andThen(a, (value) => Effect.succeed(value + 4))\nconst andThenned3 = Effect.andThen(a, 5)\nconst andThenned4 = Effect.andThen(a, Effect.succeed(6))\n\nconsole.log(`andThen1: ${Effect.runSync(andThenned1)}`)\nconsole.log(`andThen2: ${Effect.runSync(andThenned2)}`)\nconsole.log(`andThen3: ${Effect.runSync(andThenned3)}`)\nconsole.log(`andThen4: ${Effect.runSync(andThenned4)}`)\n"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Mapped value: 2",
+                                "FlatMapped value: 3",
+                                "andThen1: 4",
+                                "andThen2: 5",
+                                "andThen3: 5",
+                                "andThen4: 6",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
